@@ -97,7 +97,11 @@ module IO_loop = struct
         | `Write io_vectors ->
           writev io_vectors >>= fun result ->
           Runtime.report_write_result t result;
-          write_loop_step ()
+          (match result with
+          | `Ok _ -> write_loop_step ()
+          | `Closed ->
+            Lwt.wakeup_later notify_write_loop_exited ();
+            Lwt.return_unit)
         | `Yield ->
           Runtime.yield_writer t write_loop;
           Lwt.return_unit
